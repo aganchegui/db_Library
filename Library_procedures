@@ -1,0 +1,82 @@
+USE db_Library;
+GO
+
+/*How many copies of the book titled "The Lost Tribe" are owned by the library branch whose name is "Sharpstown"?*/
+CREATE PROC procTheLostTribe_Sharpstown
+AS
+	SELECT BookCopies.NumberOfCopies
+		FROM BookCopies
+		INNER JOIN LibraryBranch ON LibraryBranch.BranchID = BookCopies.BranchID
+		INNER JOIN Books ON Books.BookID = BookCopies.BookID
+		WHERE LibraryBranch.BranchName = 'Sharpstown'
+		AND Books.Title = 'The Lost Tribe'
+	;
+GO
+
+/* How many copies of the book titled "The Lost Tribe" are owned by each library branch? */
+CREATE PROC procTheLostTribe_AllLibraries
+AS
+	SELECT BookCopies.NumberOfCopies, LibraryBranch.BranchName
+		FROM BookCopies
+		INNER JOIN LibraryBranch ON LibraryBranch.BranchID = BookCopies.BranchID
+		INNER JOIN Books ON Books.BookID = BookCopies.BookID
+		WHERE Books.Title = 'The Lost Tribe'
+	;
+GO
+
+/* Retrieve the names of all borrowers who do not have any books checked out. */
+CREATE PROC procNoneCheckedOut
+AS
+	SELECT [Name]
+		FROM Borrower
+		WHERE Borrower.CardNo NOT IN (SELECT CardNo FROM BookLoans)
+	;
+GO
+
+/* For each book that is loaned out from the "Sharpstown" branch and whose DueDate is today, retrieve the book title, the borrower's name, and the borrower's address. */
+CREATE PROC procSharpstownDueToday
+AS
+	SELECT Books.Title, Borrower.[Name], Borrower.[Address]
+		FROM Books
+		INNER JOIN BookLoans ON BookLoans.BookID = Books.BookID
+		INNER JOIN Borrower ON Borrower.CardNo = BookLoans.CardNo
+		INNER JOIN LibraryBranch ON LibraryBranch.BranchID = BookLoans.BranchID
+		WHERE LibraryBranch.[BranchName] = 'Sharpstown'
+		AND BookLoans.DateDue = CONVERT(nvarchar(10), GETDATE(), 120)
+	;
+GO
+
+/* For each library branch, retrieve the branch name and the total number of books loaned out from that branch. */
+CREATE PROC procCheckOutCount
+AS
+	SELECT LibraryBranch.BranchName, COUNT(BookLoans.BookID) AS 'Books Checked Out'
+		FROM LibraryBranch
+		INNER JOIN BookLoans ON BookLoans.BranchID = LibraryBranch.BranchID
+		GROUP BY BranchName
+		ORDER BY LibraryBranch.BranchName ASC
+	;
+GO
+
+/* Retrieve the names, addresses, and the number of books checked out for all borrowers who have more than five books checked out. */
+CREATE PROC procFiveBooks
+AS
+	SELECT Borrower.[Name], Borrower.[Address], COUNT(BookLoans.BookID) AS Books
+		FROM Borrower
+		INNER JOIN BookLoans ON BookLoans.CardNo = Borrower.CardNo
+		GROUP BY Borrower.[Name], Borrower.[Address]
+		HAVING COUNT(BookLoans.BookID) >= 5;
+	;
+GO
+
+/* For each book authored (or co-authored) by "Stephen King", retrieve the title and the number of copies owned by the library branch whose name is "Central" */
+CREATE PROC procStephenKingCentral
+AS
+	SELECT Books.Title, BookCopies.NumberOfCopies
+		FROM Books
+		INNER JOIN BookCopies ON BookCopies.BookID = Books.BookID
+		INNER JOIN BookAuthors ON BookAuthors.BookID = Books.BookID
+		INNER JOIN LibraryBranch ON LibraryBranch.BranchID = BookCopies.BranchID
+		WHERE BookAuthors.AuthorName  = 'Stephen King'
+		AND LibraryBranch.BranchName = 'Central'
+	;
+GO
